@@ -112,16 +112,16 @@ export default function Home() {
               <div 
                 key={habit.id} 
                 onClick={() => toggleHabit(habit.id)}
-                className={`group bg-white rounded-2xl p-4 border transition-all duration-300 flex items-center gap-4 cursor-pointer active:scale-[0.98] ${habit.progress && habit.progress[today] ? 'border-primary/50 bg-primary/5' : 'border-border/50 shadow-sm'}`}
+                className={`group bg-card rounded-2xl p-4 border transition-all duration-300 flex items-center gap-4 cursor-pointer active:scale-[0.98] ${habit.progress && habit.progress[today] ? 'border-primary/50 bg-primary/5' : 'border-border/50 shadow-sm'}`}
               >
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${habit.progress && habit.progress[today] ? 'bg-primary text-white' : 'bg-secondary text-muted-foreground group-hover:bg-primary/10'}`}>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${habit.progress && habit.progress[today] ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground group-hover:bg-primary/10'}`}>
                   {habit.progress && habit.progress[today] ? <CheckCircle2 className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
                 </div>
                 <div className="flex-1">
-                  <h3 className={`font-bold transition-all ${habit.progress && habit.progress[today] ? 'text-primary' : 'text-foreground'}`}>
+                  <h3 className={`font-bold transition-all ${habit.progress && habit.progress[today] ? 'text-primary' : 'text-card-foreground'}`}>
                     {habit.name}
                   </h3>
-                  <p className="text-sm text-muted-foreground line-clamp-1">{habit.motivation}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-1 italic opacity-80">{habit.motivation}</p>
                 </div>
               </div>
             ))}
@@ -129,7 +129,7 @@ export default function Home() {
             {todayHabits.length === 0 && (
               <div className="text-center py-12 px-6 bg-secondary/30 rounded-3xl border border-dashed border-border">
                 <p className="text-muted-foreground font-medium">No habits scheduled for today.</p>
-                <p className="text-xs text-muted-foreground/60 mt-1">Go to Add Habit to create a new one!</p>
+                <p className="text-xs text-muted-foreground/60 mt-1 uppercase tracking-widest">Create something new!</p>
               </div>
             )}
           </div>

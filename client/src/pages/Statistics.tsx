@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/PageHeader";
-import { TrendingUp, Award, Calendar as CalendarIcon, Target, Zap } from "lucide-react";
+import { TrendingUp, Award, Target, Zap } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { format, subDays, eachDayOfInterval, isSameDay } from "date-fns";
@@ -87,39 +87,39 @@ export default function Statistics() {
         animate="show"
         className="grid grid-cols-2 gap-4"
       >
-        <motion.div variants={item} className="col-span-2 bg-white rounded-3xl p-6 border border-border/50 shadow-sm flex items-center gap-4">
+        <motion.div variants={item} className="col-span-2 bg-card rounded-3xl p-6 border border-border/50 shadow-sm flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
             <TrendingUp className="w-8 h-8" />
           </div>
           <div>
             <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Completion Rate</p>
-            <p className="text-3xl font-black text-foreground">{stats.completionRate}% <span className="text-sm font-medium text-muted-foreground">last 7 days</span></p>
+            <p className="text-3xl font-black text-card-foreground">{stats.completionRate}% <span className="text-sm font-medium text-muted-foreground">last 7 days</span></p>
           </div>
         </motion.div>
 
-        <motion.div variants={item} className="bg-white rounded-3xl p-6 border border-border/50 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center mb-4">
+        <motion.div variants={item} className="bg-card rounded-3xl p-6 border border-border/50 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center mb-4">
             <Zap className="w-5 h-5 fill-current" />
           </div>
           <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Best Streak</p>
-          <p className="text-2xl font-black text-foreground">{stats.currentStreak} Days</p>
+          <p className="text-2xl font-black text-card-foreground">{stats.currentStreak} Days</p>
         </motion.div>
 
-        <motion.div variants={item} className="bg-white rounded-3xl p-6 border border-border/50 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center mb-4">
+        <motion.div variants={item} className="bg-card rounded-3xl p-6 border border-border/50 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center mb-4">
             <Award className="w-5 h-5" />
           </div>
           <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Total Habits</p>
-          <p className="text-2xl font-black text-foreground">{stats.totalHabits}</p>
+          <p className="text-2xl font-black text-card-foreground">{stats.totalHabits}</p>
         </motion.div>
 
         <motion.div variants={item} className="col-span-2 bg-secondary/30 rounded-3xl p-8 border border-dashed border-border text-center">
-          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mx-auto mb-4">
+          <div className="w-16 h-16 bg-card rounded-full flex items-center justify-center shadow-sm mx-auto mb-4">
             <Target className="w-8 h-8 text-muted-foreground" />
           </div>
-          <h3 className="font-bold text-lg mb-2">Detailed Analytics</h3>
-          <p className="text-muted-foreground text-sm max-w-[220px] mx-auto">
-            Charts and monthly progress reports will appear as you track more data.
+          <h3 className="font-bold text-lg mb-2 text-foreground">Detailed Analytics</h3>
+          <p className="text-muted-foreground text-sm max-w-[220px] mx-auto opacity-70 italic">
+            Advanced reports will unlock as you progress further.
           </p>
         </motion.div>
       </motion.div>

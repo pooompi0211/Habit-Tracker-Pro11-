@@ -29,37 +29,29 @@ export default function Calendar() {
 
   const getDayStatus = (date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd");
-    const dayHabits = habits.filter(h => {
-      // In a real app we'd filter by schedule too, but let's simplify for calendar view
-      // Just show if ANY habit was completed or scheduled
-      return true;
-    });
+    const dayHabits = habits.length;
     
-    if (dayHabits.length === 0) return "none";
-    const completed = dayHabits.filter(h => h.progress[dateStr]).length;
+    if (dayHabits === 0) return "none";
+    const completed = habits.filter(h => h.progress && h.progress[dateStr]).length;
     if (completed === 0) return "uncompleted";
-    if (completed === dayHabits.length) return "full";
+    if (completed === dayHabits) return "full";
     return "partial";
   };
 
   const selectedDayStr = format(selectedDay, "yyyy-MM-dd");
-  const selectedDayHabits = habits.filter(h => {
-    // Show all habits for simplicity in history view
-    return true;
-  });
 
   return (
     <div className="min-h-screen bg-background pb-24 px-6 pt-safe">
       <PageHeader title="Schedule" subtitle="Track your consistency" />
 
-      <div className="bg-white rounded-3xl p-6 shadow-sm border border-border/50">
+      <div className="bg-card rounded-3xl p-6 shadow-sm border border-border/50">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-xl font-bold font-display">{format(currentDate, "MMMM yyyy")}</h2>
+          <h2 className="text-xl font-bold font-display text-card-foreground">{format(currentDate, "MMMM yyyy")}</h2>
           <div className="flex gap-2">
-            <Button variant="ghost" size="icon" onClick={prevMonth} className="rounded-full">
+            <Button variant="ghost" size="icon" onClick={prevMonth} className="rounded-full hover:bg-secondary">
               <ChevronLeft className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={nextMonth} className="rounded-full">
+            <Button variant="ghost" size="icon" onClick={nextMonth} className="rounded-full hover:bg-secondary">
               <ChevronRight className="w-5 h-5" />
             </Button>
           </div>
@@ -74,7 +66,6 @@ export default function Calendar() {
         </div>
         
         <div className="grid grid-cols-7 gap-y-4 gap-x-2 place-items-center">
-          {/* Padding for start of month */}
           {Array.from({ length: getDay(monthStart) }).map((_, i) => (
             <div key={`pad-${i}`} className="w-10 h-10" />
           ))}
@@ -90,13 +81,13 @@ export default function Calendar() {
                 onClick={() => setSelectedDay(day)}
                 className={`
                   relative w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all cursor-pointer
-                  ${isSelected ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'hover:bg-secondary'}
-                  ${isToday && !isSelected ? 'text-primary font-bold ring-2 ring-primary/20' : 'text-foreground'}
+                  ${isSelected ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' : 'hover:bg-secondary text-card-foreground'}
+                  ${isToday && !isSelected ? 'text-primary font-bold ring-2 ring-primary/20' : ''}
                 `}
               >
                 {format(day, "d")}
                 {status !== "none" && !isSelected && (
-                  <div className={`absolute -bottom-1 w-1 h-1 rounded-full ${status === 'full' ? 'bg-green-500' : status === 'partial' ? 'bg-yellow-500' : 'bg-red-300'}`} />
+                  <div className={`absolute -bottom-1 w-1 h-1 rounded-full ${status === 'full' ? 'bg-green-500' : status === 'partial' ? 'bg-yellow-500' : 'bg-destructive'}`} />
                 )}
               </div>
             );
@@ -105,24 +96,24 @@ export default function Calendar() {
       </div>
 
       <div className="mt-8 space-y-4">
-        <h3 className="font-bold text-lg px-2">
+        <h3 className="font-bold text-lg px-2 text-foreground">
           {isSameDay(selectedDay, new Date()) ? "Today's History" : format(selectedDay, "MMM d, yyyy")}
         </h3>
         
         <div className="space-y-3">
-          {selectedDayHabits.map(habit => (
-            <div key={habit.id} className="bg-white rounded-2xl p-4 border border-border/50 flex items-center gap-4">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${habit.progress[selectedDayStr] ? 'text-green-500 bg-green-50' : 'text-muted-foreground bg-secondary'}`}>
-                {habit.progress[selectedDayStr] ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
+          {habits.map(habit => (
+            <div key={habit.id} className="bg-card rounded-2xl p-4 border border-border/50 flex items-center gap-4 shadow-sm">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${habit.progress && habit.progress[selectedDayStr] ? 'text-green-500 bg-green-500/10' : 'text-muted-foreground bg-secondary'}`}>
+                {habit.progress && habit.progress[selectedDayStr] ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
               </div>
-              <span className={`font-medium ${habit.progress[selectedDayStr] ? 'text-foreground' : 'text-muted-foreground'}`}>
+              <span className={`font-bold ${habit.progress && habit.progress[selectedDayStr] ? 'text-card-foreground' : 'text-muted-foreground opacity-70'}`}>
                 {habit.name}
               </span>
             </div>
           ))}
           
-          {selectedDayHabits.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground bg-secondary/20 rounded-2xl">
+          {habits.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground bg-secondary/20 rounded-3xl border border-dashed border-border">
               No habits recorded.
             </div>
           )}

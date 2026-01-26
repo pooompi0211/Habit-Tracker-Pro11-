@@ -1,10 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Sparkles, Clock, Repeat, Check } from "lucide-react";
+import { ArrowLeft, Sparkles, Clock, Repeat } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -62,17 +60,17 @@ export default function AddHabit() {
           variant="outline"
           size="icon"
           onClick={() => setLocation("/")}
-          className="rounded-full"
+          className="rounded-full hover:bg-secondary"
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-2xl font-bold font-display">New Habit</h1>
+        <h1 className="text-2xl font-bold font-display text-foreground">New Habit</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col max-w-lg mx-auto w-full">
         <div className="space-y-8 flex-1">
           <div className="space-y-3">
-            <label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            <label className="text-sm font-bold uppercase tracking-wider text-muted-foreground opacity-70">
               What do you want to achieve?
             </label>
             <div className="relative">
@@ -85,47 +83,47 @@ export default function AddHabit() {
                 placeholder="e.g., Read 30 mins, Drink Water"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full bg-white text-xl font-bold p-6 pl-14 rounded-3xl border border-border/50 shadow-sm focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all placeholder:text-muted-foreground/40"
+                className="w-full bg-card text-foreground text-xl font-bold p-6 pl-14 rounded-3xl border border-border/50 shadow-sm focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all placeholder:text-muted-foreground/30"
               />
             </div>
           </div>
 
           <div className="space-y-4">
-            <label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            <label className="text-sm font-bold uppercase tracking-wider text-muted-foreground opacity-70">
               Frequency
             </label>
             <div className="grid grid-cols-2 gap-4">
               <button 
                 type="button" 
                 onClick={() => setFormData(p => ({ ...p, frequency: "daily" }))}
-                className={`p-4 rounded-2xl border transition-all text-left flex flex-col gap-2 ${formData.frequency === "daily" ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : 'bg-white border-border/50'}`}
+                className={`p-4 rounded-2xl border transition-all text-left flex flex-col gap-2 ${formData.frequency === "daily" ? 'border-primary bg-primary/10 ring-2 ring-primary/20' : 'bg-card border-border/50 shadow-sm'}`}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${formData.frequency === "daily" ? 'bg-primary text-white' : 'bg-orange-50 text-orange-500'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${formData.frequency === "daily" ? 'bg-primary text-primary-foreground' : 'bg-orange-500/10 text-orange-500'}`}>
                   <Repeat className="w-4 h-4" />
                 </div>
-                <span className="font-bold text-sm">Every day</span>
+                <span className={`font-bold text-sm ${formData.frequency === "daily" ? 'text-primary' : 'text-card-foreground'}`}>Every day</span>
               </button>
 
               <button 
                 type="button" 
                 onClick={() => setFormData(p => ({ ...p, frequency: "custom" }))}
-                className={`p-4 rounded-2xl border transition-all text-left flex flex-col gap-2 ${formData.frequency === "custom" ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : 'bg-white border-border/50'}`}
+                className={`p-4 rounded-2xl border transition-all text-left flex flex-col gap-2 ${formData.frequency === "custom" ? 'border-primary bg-primary/10 ring-2 ring-primary/20' : 'bg-card border-border/50 shadow-sm'}`}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${formData.frequency === "custom" ? 'bg-primary text-white' : 'bg-blue-50 text-blue-500'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${formData.frequency === "custom" ? 'bg-primary text-primary-foreground' : 'bg-accent/10 text-accent'}`}>
                   <Clock className="w-4 h-4" />
                 </div>
-                <span className="font-bold text-sm">Custom days</span>
+                <span className={`font-bold text-sm ${formData.frequency === "custom" ? 'text-primary' : 'text-card-foreground'}`}>Custom days</span>
               </button>
             </div>
 
             {formData.frequency === "custom" && (
-              <div className="flex flex-wrap gap-2 p-4 bg-white rounded-2xl border border-border/50">
+              <div className="flex flex-wrap gap-2 p-4 bg-card rounded-2xl border border-border/50 shadow-sm">
                 {DAYS.map((day, i) => (
                   <Button
                     key={day}
                     type="button"
                     variant={formData.days.includes(i) ? "default" : "outline"}
-                    className="flex-1 min-w-[60px]"
+                    className="flex-1 min-w-[60px] font-bold"
                     onClick={() => toggleDay(i)}
                   >
                     {day}
@@ -136,14 +134,14 @@ export default function AddHabit() {
           </div>
 
           <div className="space-y-3">
-            <label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            <label className="text-sm font-bold uppercase tracking-wider text-muted-foreground opacity-70">
               Motivation (Optional)
             </label>
             <textarea
               placeholder="Why is this important to you?"
               value={formData.motivation}
               onChange={(e) => setFormData(prev => ({ ...prev, motivation: e.target.value }))}
-              className="w-full bg-white p-6 rounded-3xl border border-border/50 shadow-sm focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all min-h-[120px] resize-none"
+              className="w-full bg-card text-foreground p-6 rounded-3xl border border-border/50 shadow-sm focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all min-h-[120px] resize-none placeholder:text-muted-foreground/30"
             />
           </div>
         </div>
