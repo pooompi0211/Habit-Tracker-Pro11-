@@ -1,70 +1,105 @@
 import { PageHeader } from "@/components/PageHeader";
-import { User, Bell, Moon, Shield, HelpCircle, LogOut, ChevronRight } from "lucide-react";
+import { User, Bell, Moon, LogOut, ChevronRight, Info, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
-  const sections = [
-    {
-      title: "Account",
-      items: [
-        { icon: User, label: "Profile", subtitle: "Manage your account info" },
-        { icon: Bell, label: "Notifications", subtitle: "Reminders & updates" },
-      ]
-    },
-    {
-      title: "App Settings",
-      items: [
-        { icon: Moon, label: "Appearance", subtitle: "Light mode active" },
-        { icon: Shield, label: "Privacy & Security", subtitle: "Data protection" },
-      ]
-    },
-    {
-      title: "Support",
-      items: [
-        { icon: HelpCircle, label: "Help & Feedback", subtitle: "FAQ and support" },
-      ]
+  const { toast } = useToast();
+  const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains("dark"));
+  const [notifications, setNotifications] = useState(true);
+
+  const toggleDarkMode = (checked: boolean) => {
+    setDarkMode(checked);
+    if (checked) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
     }
-  ];
+  };
+
+  const handleReset = () => {
+    if (confirm("Are you sure you want to delete all habits and progress? This cannot be undone.")) {
+      localStorage.removeItem("habits");
+      toast({ title: "Data Reset", description: "All habits have been cleared." });
+      window.location.reload();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24 px-6 pt-safe">
       <PageHeader title="Settings" subtitle="Customize your experience" />
 
       <div className="space-y-8">
-        {sections.map((section, idx) => (
-          <div key={idx}>
-            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4 px-2">
-              {section.title}
-            </h3>
-            <div className="bg-white rounded-3xl overflow-hidden border border-border/50 shadow-sm">
-              {section.items.map((item, itemIdx) => (
-                <div 
-                  key={itemIdx}
-                  className={`
-                    flex items-center p-4 hover:bg-secondary/50 cursor-pointer transition-colors
-                    ${itemIdx !== section.items.length - 1 ? 'border-b border-border/50' : ''}
-                  `}
-                >
-                  <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-foreground mr-4">
-                    <item.icon className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-bold text-foreground">{item.label}</p>
-                    <p className="text-sm text-muted-foreground">{item.subtitle}</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground/50" />
-                </div>
-              ))}
+        <div>
+          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4 px-2">
+            App Settings
+          </h3>
+          <div className="bg-white rounded-3xl overflow-hidden border border-border/50 shadow-sm divide-y divide-border/50">
+            <div className="flex items-center p-4">
+              <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-500 flex items-center justify-center mr-4">
+                <Moon className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-foreground">Dark Mode</p>
+                <p className="text-sm text-muted-foreground">Adjust the app appearance</p>
+              </div>
+              <Switch checked={darkMode} onCheckedChange={toggleDarkMode} />
+            </div>
+
+            <div className="flex items-center p-4">
+              <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center mr-4">
+                <Bell className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-foreground">Notifications</p>
+                <p className="text-sm text-muted-foreground">Daily reminders & updates</p>
+              </div>
+              <Switch checked={notifications} onCheckedChange={setNotifications} />
             </div>
           </div>
-        ))}
+        </div>
 
-        <button className="w-full p-4 flex items-center justify-center gap-2 text-destructive font-bold bg-destructive/10 rounded-2xl hover:bg-destructive/20 transition-colors">
-          <LogOut className="w-5 h-5" />
-          Log Out
-        </button>
+        <div>
+          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4 px-2">
+            Data Management
+          </h3>
+          <div className="bg-white rounded-3xl overflow-hidden border border-border/50 shadow-sm divide-y divide-border/50">
+            <div onClick={handleReset} className="flex items-center p-4 hover:bg-red-50 cursor-pointer transition-colors group">
+              <div className="w-10 h-10 rounded-full bg-red-50 text-red-500 flex items-center justify-center mr-4 group-hover:bg-red-100">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-red-600">Reset All Data</p>
+                <p className="text-sm text-red-400">Clear habits and history</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-red-200" />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4 px-2">
+            About
+          </h3>
+          <div className="bg-white rounded-3xl overflow-hidden border border-border/50 shadow-sm divide-y divide-border/50 text-left">
+            <div className="flex items-center p-4">
+              <div className="w-10 h-10 rounded-full bg-gray-50 text-gray-500 flex items-center justify-center mr-4">
+                <Info className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-foreground">Habit Tracker Pro</p>
+                <p className="text-sm text-muted-foreground">Version 1.0.0 • Built with Love</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <p className="text-center text-xs text-muted-foreground font-medium pt-4">
-          Version 1.0.0 • Habit Tracker Pro
+          All data is stored locally on your device.
         </p>
       </div>
     </div>
