@@ -1,8 +1,6 @@
 import { users, type User, type InsertUser } from "@shared/schema";
 import { habits, type Habit, type InsertHabit } from "@shared/schema";
 
-// This is a simple in-memory storage for iteration 1
-// We will implement full DB persistence later
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -52,8 +50,9 @@ export class MemStorage implements IStorage {
     const habit: Habit = { 
       ...insertHabit, 
       id, 
-      description: insertHabit.description ?? null,
-      completed: false,
+      motivation: insertHabit.motivation ?? null,
+      frequency: insertHabit.frequency ?? "daily",
+      completedDates: [],
       createdAt: new Date()
     };
     this.habits.set(id, habit);
