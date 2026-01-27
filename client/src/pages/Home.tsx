@@ -13,17 +13,22 @@ interface Habit {
   progress: Record<string, boolean>;
 }
 
-const MOTIVATORS = [
-  "You're doing great! Keep it up.",
-  "Small steps lead to big changes.",
-  "Consistent action is the key to success.",
-  "Keep going, you're becoming the best version of yourself!",
-  "Another one down! You're unstoppable."
+const MOTIVATIONAL_QUOTES = [
+  { text: "Excellence is not an act, but a habit. We are what we repeatedly do.", author: "Aristotle" },
+  { text: "The secret of your future is hidden in your daily routine.", author: "Mike Murdock" },
+  { text: "Motivation is what gets you started. Habit is what keeps you going.", author: "Jim Ryun" },
+  { text: "Your habits will determine your future.", author: "Jack Canfield" },
+  { text: "Successful people are simply those with successful habits.", author: "Brian Tracy" },
+  { text: "First we make our habits, then our habits make us.", author: "Charles C. Noble" },
+  { text: "Atomic habits are the building blocks of remarkable results.", author: "James Clear" },
+  { text: "Small habits can make a big difference.", author: "Unknown" },
+  { text: "Discipline is choosing between what you want now and what you want most.", author: "Abraham Lincoln" },
+  { text: "Consistency is the foundation of virtue.", author: "Francis Bacon" }
 ];
 
 export default function Home() {
   const [habits, setHabits] = useState<Habit[]>([]);
-  const [motivator, setMotivator] = useState("");
+  const [quote, setQuote] = useState(MOTIVATIONAL_QUOTES[0]);
   
   const today = format(new Date(), "yyyy-MM-dd");
   const todayDayIndex = new Date().getDay();
@@ -31,6 +36,10 @@ export default function Home() {
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem("habits") || "[]");
     setHabits(stored);
+
+    // Rotate quote based on date
+    const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
+    setQuote(MOTIVATIONAL_QUOTES[dayOfYear % MOTIVATIONAL_QUOTES.length]);
   }, []);
 
   const todayHabits = habits.filter(h => {
@@ -47,7 +56,6 @@ export default function Home() {
         const isCompleting = !newProgress[today];
         if (isCompleting) {
           newProgress[today] = true;
-          setMotivator(MOTIVATORS[Math.floor(Math.random() * MOTIVATORS.length)]);
         } else {
           delete newProgress[today];
         }
@@ -91,10 +99,10 @@ export default function Home() {
               <Zap className="w-5 h-5 text-yellow-300 fill-yellow-300" />
             </div>
             <p className="text-xl font-medium leading-relaxed font-display">
-              {motivator || "\"Excellence is not an act, but a habit. We are what we repeatedly do.\""}
+              "{quote.text}"
             </p>
             <p className="mt-4 text-white/80 font-medium text-sm tracking-wide uppercase">
-              {motivator ? "— Your AI Motivator" : "— Aristotle"}
+              — {quote.author}
             </p>
           </div>
         </motion.div>

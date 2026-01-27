@@ -1,13 +1,15 @@
 import { PageHeader } from "@/components/PageHeader";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle2, Circle } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle2, Circle, Check } from "lucide-react";
 import { useState, useEffect } from "react";
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay } from "date-fns";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, isAfter, startOfDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 
 interface Habit {
   id: string;
   name: string;
   progress: Record<string, boolean>;
+  frequency: "daily" | "custom";
+  days: number[];
 }
 
 export default function Calendar() {
@@ -29,16 +31,31 @@ export default function Calendar() {
 
   const getDayStatus = (date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd");
-    const dayHabits = habits.length;
+    const dayIdx = getDay(date);
+    const today = startOfDay(new Date());
+    const isFuture = isAfter(startOfDay(date), today);
     
-    if (dayHabits === 0) return "none";
-    const completed = habits.filter(h => h.progress && h.progress[dateStr]).length;
-    if (completed === 0) return "uncompleted";
-    if (completed === dayHabits) return "full";
+    // Habits scheduled for this day
+    const scheduledHabits = habits.filter(h => {
+      if (h.frequency === "daily") return true;
+      return h.days && h.days.includes(dayIdx);
+    });
+
+    if (scheduledHabits.length === 0 || isFuture) return "none";
+
+    const completed = scheduledHabits.filter(h => h.progress && h.progress[dateStr]).length;
+    
+    if (completed === scheduledHabits.length) return "full";
+    if (completed === 0) return "none-completed"; // Missed
     return "partial";
   };
 
   const selectedDayStr = format(selectedDay, "yyyy-MM-dd");
+  const selectedDayIdx = getDay(selectedDay);
+  const selectedDayHabits = habits.filter(h => {
+    if (h.frequency === "daily") return true;
+    return h.days && h.days.includes(selectedDayIdx);
+  });
 
   return (
     <div className="min-h-screen bg-background pb-24 px-6 pt-safe">
@@ -86,8 +103,16 @@ export default function Calendar() {
                 `}
               >
                 {format(day, "d")}
-                {status !== "none" && !isSelected && (
-                  <div className={`absolute -bottom-1 w-1 h-1 rounded-full ${status === 'full' ? 'bg-green-500' : status === 'partial' ? 'bg-yellow-500' : 'bg-destructive'}`} />
+                {status === 'full' && (
+                  <div className="absolute -bottom-1 w-3 h-3 bg-green-500 rounded-full border-2 border-card flex items-center justify-center">
+                    <Check className="w-2 h-2 text-white" strokeWidth={4} />
+                  </div>
+                )}
+                {status === 'partial' && (
+                  <div className="absolute -bottom-1 w-2 h-2 bg-yellow-500 rounded-full border border-card" />
+                )}
+                {status === 'none-completed' && (
+                  <div className="absolute -bottom-1 w-2 h-2 bg-orange-500 rounded-full border border-card" />
                 )}
               </div>
             );
@@ -101,7 +126,7 @@ export default function Calendar() {
         </h3>
         
         <div className="space-y-3">
-          {habits.map(habit => (
+          {selectedDayHabits.map(habit => (
             <div key={habit.id} className="bg-card rounded-2xl p-4 border border-border/50 flex items-center gap-4 shadow-sm">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${habit.progress && habit.progress[selectedDayStr] ? 'text-green-500 bg-green-500/10' : 'text-muted-foreground bg-secondary'}`}>
                 {habit.progress && habit.progress[selectedDayStr] ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
@@ -112,9 +137,9 @@ export default function Calendar() {
             </div>
           ))}
           
-          {habits.length === 0 && (
+          {selectedDayHabits.length === 0 && (
             <div className="text-center py-12 text-muted-foreground bg-secondary/20 rounded-3xl border border-dashed border-border">
-              No habits recorded.
+              No habits scheduled for this day.
             </div>
           )}
         </div>
