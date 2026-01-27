@@ -1,15 +1,17 @@
 import { PageHeader } from "@/components/PageHeader";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle2, Circle, Check } from "lucide-react";
 import { useState, useEffect } from "react";
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, isAfter, startOfDay } from "date-fns";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, isAfter, startOfDay, isBefore } from "date-fns";
 import { Button } from "@/components/ui/button";
 
 interface Habit {
   id: string;
   name: string;
   progress: Record<string, boolean>;
-  frequency: "daily" | "custom";
-  days: number[];
+  frequency: "daily" | "weekly" | "custom" | "timed" | "goal";
+  days?: number[];
+  scheduledTime?: string;
+  goalStreak?: number;
 }
 
 export default function Calendar() {
@@ -34,10 +36,11 @@ export default function Calendar() {
     const dayIdx = getDay(date);
     const today = startOfDay(new Date());
     const isFuture = isAfter(startOfDay(date), today);
+    const isPast = isBefore(startOfDay(date), today);
     
-    // Habits scheduled for this day
     const scheduledHabits = habits.filter(h => {
-      if (h.frequency === "daily") return true;
+      if (h.frequency === "daily" || h.frequency === "timed" || h.frequency === "goal") return true;
+      if (h.frequency === "weekly") return dayIdx === 1; // Default weekly to Monday for simplicity
       return h.days && h.days.includes(dayIdx);
     });
 
@@ -46,14 +49,20 @@ export default function Calendar() {
     const completed = scheduledHabits.filter(h => h.progress && h.progress[dateStr]).length;
     
     if (completed === scheduledHabits.length) return "full";
-    if (completed === 0) return "none-completed"; // Missed
-    return "partial";
+    if (isPast || isToday(date)) {
+      if (completed === 0) return "none-completed";
+      return "partial";
+    }
+    return "none";
   };
+
+  const isToday = (date: Date) => isSameDay(date, new Date());
 
   const selectedDayStr = format(selectedDay, "yyyy-MM-dd");
   const selectedDayIdx = getDay(selectedDay);
   const selectedDayHabits = habits.filter(h => {
-    if (h.frequency === "daily") return true;
+    if (h.frequency === "daily" || h.frequency === "timed" || h.frequency === "goal") return true;
+    if (h.frequency === "weekly") return selectedDayIdx === 1;
     return h.days && h.days.includes(selectedDayIdx);
   });
 
@@ -89,7 +98,7 @@ export default function Calendar() {
           
           {days.map((day) => {
             const status = getDayStatus(day);
-            const isToday = isSameDay(day, new Date());
+            const isTodayDate = isToday(day);
             const isSelected = isSameDay(day, selectedDay);
             
             return (
@@ -99,7 +108,7 @@ export default function Calendar() {
                 className={`
                   relative w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all cursor-pointer
                   ${isSelected ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' : 'hover:bg-secondary text-card-foreground'}
-                  ${isToday && !isSelected ? 'text-primary font-bold ring-2 ring-primary/20' : ''}
+                  ${isTodayDate && !isSelected ? 'text-primary font-bold ring-2 ring-primary/20' : ''}
                 `}
               >
                 {format(day, "d")}
@@ -122,7 +131,7 @@ export default function Calendar() {
 
       <div className="mt-8 space-y-4">
         <h3 className="font-bold text-lg px-2 text-foreground">
-          {isSameDay(selectedDay, new Date()) ? "Today's History" : format(selectedDay, "MMM d, yyyy")}
+          {isToday(selectedDay) ? "Today's History" : format(selectedDay, "MMM d, yyyy")}
         </h3>
         
         <div className="space-y-3">
@@ -131,9 +140,12 @@ export default function Calendar() {
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${habit.progress && habit.progress[selectedDayStr] ? 'text-green-500 bg-green-500/10' : 'text-muted-foreground bg-secondary'}`}>
                 {habit.progress && habit.progress[selectedDayStr] ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
               </div>
-              <span className={`font-bold ${habit.progress && habit.progress[selectedDayStr] ? 'text-card-foreground' : 'text-muted-foreground opacity-70'}`}>
-                {habit.name}
-              </span>
+              <div className="flex-1">
+                <span className={`font-bold block ${habit.progress && habit.progress[selectedDayStr] ? 'text-card-foreground' : 'text-muted-foreground opacity-70'}`}>
+                  {habit.name}
+                </span>
+                {habit.scheduledTime && <span className="text-xs text-muted-foreground">{habit.scheduledTime}</span>}
+              </div>
             </div>
           ))}
           

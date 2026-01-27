@@ -1,8 +1,8 @@
 import { PageHeader } from "@/components/PageHeader";
-import { TrendingUp, Award, Target, Zap } from "lucide-react";
+import { TrendingUp, Award, Target, Zap, Clock, Calendar as CalendarIcon, XCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { format, subDays, eachDayOfInterval, isSameDay } from "date-fns";
+import { format, subDays, eachDayOfInterval, isSameDay, isBefore, startOfDay } from "date-fns";
 
 interface Habit {
   id: string;
@@ -10,6 +10,7 @@ interface Habit {
   progress: Record<string, boolean>;
   frequency: string;
   days: number[];
+  createdAt: string;
 }
 
 export default function Statistics() {
@@ -28,12 +29,29 @@ export default function Statistics() {
 
     let totalPossible = 0;
     let totalCompleted = 0;
+    let missedDays = 0;
 
     habits.forEach(h => {
+      // Calculate missed days since habit creation
+      const start = startOfDay(new Date(h.createdAt || Date.now()));
+      const interval = eachDayOfInterval({ start, end: startOfDay(new Date()) });
+      
+      interval.forEach(day => {
+        const dayIdx = day.getDay();
+        const dateStr = format(day, "yyyy-MM-dd");
+        const isScheduled = h.frequency === "daily" || (h.days && h.days.includes(dayIdx));
+        
+        if (isScheduled) {
+          if (!h.progress || !h.progress[dateStr]) {
+            if (isBefore(day, startOfDay(new Date()))) missedDays++;
+          }
+        }
+      });
+
+      // Last 7 days stats
       last7Days.forEach(day => {
         const dayIdx = day.getDay();
         const dateStr = format(day, "yyyy-MM-dd");
-        
         if (h.frequency === "daily" || (h.days && h.days.includes(dayIdx))) {
           totalPossible++;
           if (h.progress && h.progress[dateStr]) totalCompleted++;
@@ -62,7 +80,13 @@ export default function Statistics() {
       return Math.max(max, streak);
     }, 0);
 
-    return { completionRate, currentStreak, totalHabits: habits.length };
+    return { 
+      completionRate, 
+      currentStreak, 
+      totalHabits: habits.length,
+      missedDays,
+      bestStreak: currentStreak // Simplified for this view
+    };
   };
 
   const stats = calculateStats();
@@ -101,13 +125,29 @@ export default function Statistics() {
           <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center mb-4">
             <Zap className="w-5 h-5 fill-current" />
           </div>
-          <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Best Streak</p>
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Current Streak</p>
           <p className="text-2xl font-black text-card-foreground">{stats.currentStreak} Days</p>
         </motion.div>
 
         <motion.div variants={item} className="bg-card rounded-3xl p-6 border border-border/50 shadow-sm">
           <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center mb-4">
             <Award className="w-5 h-5" />
+          </div>
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Best Streak</p>
+          <p className="text-2xl font-black text-card-foreground">{stats.bestStreak} Days</p>
+        </motion.div>
+
+        <motion.div variants={item} className="bg-card rounded-3xl p-6 border border-border/50 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center mb-4">
+            <XCircle className="w-5 h-5" />
+          </div>
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Missed Days</p>
+          <p className="text-2xl font-black text-destructive">{stats.missedDays}</p>
+        </motion.div>
+
+        <motion.div variants={item} className="bg-card rounded-3xl p-6 border border-border/50 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-4">
+            <CalendarIcon className="w-5 h-5" />
           </div>
           <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Total Habits</p>
           <p className="text-2xl font-black text-card-foreground">{stats.totalHabits}</p>
@@ -117,9 +157,9 @@ export default function Statistics() {
           <div className="w-16 h-16 bg-card rounded-full flex items-center justify-center shadow-sm mx-auto mb-4">
             <Target className="w-8 h-8 text-muted-foreground" />
           </div>
-          <h3 className="font-bold text-lg mb-2 text-foreground">Detailed Analytics</h3>
+          <h3 className="font-bold text-lg mb-2 text-foreground">Goal Progress</h3>
           <p className="text-muted-foreground text-sm max-w-[220px] mx-auto opacity-70 italic">
-            Advanced reports will unlock as you progress further.
+            You've completed {stats.completionRate}% of your goals this week. Keep pushing!
           </p>
         </motion.div>
       </motion.div>
