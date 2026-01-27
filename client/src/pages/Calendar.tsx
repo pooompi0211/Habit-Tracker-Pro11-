@@ -12,6 +12,7 @@ interface Habit {
   days?: number[];
   scheduledTime?: string;
   goalStreak?: number;
+  createdAt: string;
 }
 
 export default function Calendar() {
@@ -26,7 +27,7 @@ export default function Calendar() {
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
-  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
@@ -35,13 +36,18 @@ export default function Calendar() {
     const dateStr = format(date, "yyyy-MM-dd");
     const dayIdx = getDay(date);
     const today = startOfDay(new Date());
-    const isFuture = isAfter(startOfDay(date), today);
-    const isPast = isBefore(startOfDay(date), today);
+    const dayStart = startOfDay(date);
+    const isFuture = isAfter(dayStart, today);
     
     const scheduledHabits = habits.filter(h => {
+      // Check if habit existed on this date
+      const createdAt = startOfDay(new Date(h.createdAt));
+      if (isBefore(dayStart, createdAt)) return false;
+
       if (h.frequency === "daily" || h.frequency === "timed" || h.frequency === "goal") return true;
-      if (h.frequency === "weekly") return dayIdx === 1; // Default weekly to Monday for simplicity
-      return h.days && h.days.includes(dayIdx);
+      if (h.frequency === "weekly") return dayIdx === 1; // Default to Mon
+      if (h.frequency === "custom") return h.days && h.days.includes(dayIdx);
+      return false;
     });
 
     if (scheduledHabits.length === 0 || isFuture) return "none";
@@ -49,26 +55,28 @@ export default function Calendar() {
     const completed = scheduledHabits.filter(h => h.progress && h.progress[dateStr]).length;
     
     if (completed === scheduledHabits.length) return "full";
-    if (isPast || isToday(date)) {
-      if (completed === 0) return "none-completed";
+    if (isBefore(dayStart, today) || isSameDay(date, today)) {
+      if (completed === 0) return "missed";
       return "partial";
     }
     return "none";
   };
 
-  const isToday = (date: Date) => isSameDay(date, new Date());
-
   const selectedDayStr = format(selectedDay, "yyyy-MM-dd");
   const selectedDayIdx = getDay(selectedDay);
   const selectedDayHabits = habits.filter(h => {
+    const createdAt = startOfDay(new Date(h.createdAt));
+    if (isBefore(startOfDay(selectedDay), createdAt)) return false;
+
     if (h.frequency === "daily" || h.frequency === "timed" || h.frequency === "goal") return true;
     if (h.frequency === "weekly") return selectedDayIdx === 1;
-    return h.days && h.days.includes(selectedDayIdx);
+    if (h.frequency === "custom") return h.days && h.days.includes(selectedDayIdx);
+    return false;
   });
 
   return (
     <div className="min-h-screen bg-background pb-24 px-6 pt-safe">
-      <PageHeader title="Schedule" subtitle="Track your consistency" />
+      <PageHeader title="Progress" subtitle="Your habit journey" />
 
       <div className="bg-card rounded-3xl p-6 shadow-sm border border-border/50">
         <div className="flex items-center justify-between mb-8">
@@ -83,9 +91,9 @@ export default function Calendar() {
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-4 mb-4">
+        <div className="grid grid-cols-7 gap-4 mb-4 text-center">
           {["S", "M", "T", "W", "T", "F", "S"].map((day) => (
-            <div key={day} className="text-center text-sm font-bold text-muted-foreground">
+            <div key={day} className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               {day}
             </div>
           ))}
@@ -96,9 +104,9 @@ export default function Calendar() {
             <div key={`pad-${i}`} className="w-10 h-10" />
           ))}
           
-          {days.map((day) => {
+          {daysInMonth.map((day) => {
             const status = getDayStatus(day);
-            const isTodayDate = isToday(day);
+            const isToday = isSameDay(day, new Date());
             const isSelected = isSameDay(day, selectedDay);
             
             return (
@@ -106,21 +114,21 @@ export default function Calendar() {
                 key={day.toISOString()} 
                 onClick={() => setSelectedDay(day)}
                 className={`
-                  relative w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all cursor-pointer
-                  ${isSelected ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' : 'hover:bg-secondary text-card-foreground'}
-                  ${isTodayDate && !isSelected ? 'text-primary font-bold ring-2 ring-primary/20' : ''}
+                  relative w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all cursor-pointer
+                  ${isSelected ? 'bg-primary text-primary-foreground shadow-lg scale-110 z-10' : 'hover:bg-secondary text-card-foreground'}
+                  ${isToday && !isSelected ? 'text-primary ring-2 ring-primary/20 ring-offset-2 ring-offset-card' : ''}
                 `}
               >
                 {format(day, "d")}
                 {status === 'full' && (
                   <div className="absolute -bottom-1 w-3 h-3 bg-green-500 rounded-full border-2 border-card flex items-center justify-center">
-                    <Check className="w-2 h-2 text-white" strokeWidth={4} />
+                    <Check className="w-1.5 h-1.5 text-white" strokeWidth={5} />
                   </div>
                 )}
                 {status === 'partial' && (
                   <div className="absolute -bottom-1 w-2 h-2 bg-yellow-500 rounded-full border border-card" />
                 )}
-                {status === 'none-completed' && (
+                {status === 'missed' && (
                   <div className="absolute -bottom-1 w-2 h-2 bg-orange-500 rounded-full border border-card" />
                 )}
               </div>
@@ -130,28 +138,40 @@ export default function Calendar() {
       </div>
 
       <div className="mt-8 space-y-4">
-        <h3 className="font-bold text-lg px-2 text-foreground">
-          {isToday(selectedDay) ? "Today's History" : format(selectedDay, "MMM d, yyyy")}
-        </h3>
+        <div className="flex items-center justify-between px-2">
+          <h3 className="font-bold text-lg text-foreground">
+            {isSameDay(selectedDay, new Date()) ? "Today" : format(selectedDay, "MMMM do")}
+          </h3>
+          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-60">
+            {selectedDayHabits.length} Habits Scheduled
+          </span>
+        </div>
         
         <div className="space-y-3">
-          {selectedDayHabits.map(habit => (
-            <div key={habit.id} className="bg-card rounded-2xl p-4 border border-border/50 flex items-center gap-4 shadow-sm">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${habit.progress && habit.progress[selectedDayStr] ? 'text-green-500 bg-green-500/10' : 'text-muted-foreground bg-secondary'}`}>
-                {habit.progress && habit.progress[selectedDayStr] ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
+          {selectedDayHabits.map(habit => {
+            const isCompleted = habit.progress && habit.progress[selectedDayStr];
+            return (
+              <div key={habit.id} className={`bg-card rounded-2xl p-4 border transition-all ${isCompleted ? 'border-green-500/30 bg-green-500/5' : 'border-border/50 shadow-sm'}`}>
+                <div className="flex items-center gap-4">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isCompleted ? 'text-green-500 bg-green-500/10' : 'text-muted-foreground bg-secondary'}`}>
+                    {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
+                  </div>
+                  <div className="flex-1">
+                    <span className={`font-bold block text-sm ${isCompleted ? 'text-card-foreground' : 'text-muted-foreground opacity-70'}`}>
+                      {habit.name}
+                    </span>
+                    {habit.scheduledTime && (
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase">{habit.scheduledTime}</span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="flex-1">
-                <span className={`font-bold block ${habit.progress && habit.progress[selectedDayStr] ? 'text-card-foreground' : 'text-muted-foreground opacity-70'}`}>
-                  {habit.name}
-                </span>
-                {habit.scheduledTime && <span className="text-xs text-muted-foreground">{habit.scheduledTime}</span>}
-              </div>
-            </div>
-          ))}
+            );
+          })}
           
           {selectedDayHabits.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground bg-secondary/20 rounded-3xl border border-dashed border-border">
-              No habits scheduled for this day.
+            <div className="text-center py-10 text-muted-foreground bg-secondary/10 rounded-3xl border border-dashed border-border">
+              <p className="text-sm font-bold opacity-60">Nothing scheduled for this day.</p>
             </div>
           )}
         </div>
