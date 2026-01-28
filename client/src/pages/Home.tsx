@@ -1,40 +1,35 @@
 import { PageHeader } from "@/components/PageHeader";
-import { CheckCircle2, Quote, Zap, Circle, Clock, Target as GoalIcon } from "lucide-react";
-import { motion } from "framer-motion";
+import { CheckCircle2, Quote, Zap, Circle, Clock, Target as GoalIcon, Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
-import { format, isSameDay } from "date-fns";
+import { format, isSameDay, subDays } from "date-fns";
 import { shouldShowHabit, type Habit } from "@/lib/habit-logic";
-
-const MOTIVATIONAL_QUOTES = [
-  { text: "Excellence is not an act, but a habit. We are what we repeatedly do.", author: "Aristotle" },
-  { text: "The secret of your future is hidden in your daily routine.", author: "Mike Murdock" },
-  { text: "Motivation is what gets you started. Habit is what keeps you going.", author: "Jim Ryun" },
-  { text: "Your habits will determine your future.", author: "Jack Canfield" },
-  { text: "Successful people are simply those with successful habits.", author: "Brian Tracy" },
-  { text: "First we make our habits, then our habits make us.", author: "Charles C. Noble" },
-  { text: "Atomic habits are the building blocks of remarkable results.", author: "James Clear" },
-  { text: "Small habits can make a big difference.", author: "Unknown" },
-  { text: "Discipline is choosing between what you want now and what you want most.", author: "Abraham Lincoln" },
-  { text: "Consistency is the foundation of virtue.", author: "Francis Bacon" }
-];
+import { getDailyQuote, getMotivatorMessage } from "@/lib/motivator";
 
 export default function Home() {
   const [habits, setHabits] = useState<Habit[]>([]);
-  const [quote, setQuote] = useState(MOTIVATIONAL_QUOTES[0]);
+  const [quote, setQuote] = useState(getDailyQuote());
+  const [motivator, setMotivator] = useState("");
+  const [showMotivator, setShowMotivator] = useState(false);
   
   const todayDate = new Date();
   const todayStr = format(todayDate, "yyyy-MM-dd");
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("habits") || "[]");
-    setHabits(stored);
-
-    const dayOfYear = Math.floor((todayDate.getTime() - new Date(todayDate.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
-    setQuote(MOTIVATIONAL_QUOTES[dayOfYear % MOTIVATIONAL_QUOTES.length]);
+    const loadHabits = () => {
+      const stored = JSON.parse(localStorage.getItem("habits") || "[]");
+      setHabits(stored);
+      setMotivator(getMotivatorMessage(stored));
+      setShowMotivator(true);
+      // Auto-hide motivator after 5 seconds if it's just a welcome
+      setTimeout(() => setShowMotivator(false), 5000);
+    };
+    loadHabits();
+    window.addEventListener('storage', loadHabits);
+    return () => window.removeEventListener('storage', loadHabits);
   }, []);
 
   const todayHabits = habits.filter(h => shouldShowHabit(h, todayDate));
-
   const completedCount = todayHabits.filter(h => h.progress && h.progress[todayStr]).length;
 
   const toggleHabit = (id: string) => {
@@ -44,6 +39,10 @@ export default function Home() {
         const isCompleting = !newProgress[todayStr];
         if (isCompleting) {
           newProgress[todayStr] = true;
+          // Show success motivator
+          setMotivator(`Awesome! ${h.name} completed!`);
+          setShowMotivator(true);
+          setTimeout(() => setShowMotivator(false), 3000);
         } else {
           delete newProgress[todayStr];
         }
@@ -62,10 +61,10 @@ export default function Home() {
       const dateStr = format(checkDate, "yyyy-MM-dd");
       if (habit.progress && habit.progress[dateStr]) {
         streak++;
-        checkDate.setDate(checkDate.getDate() - 1);
+        checkDate = subDays(checkDate, 1);
       } else {
         if (isSameDay(checkDate, new Date())) {
-          checkDate.setDate(checkDate.getDate() - 1);
+          checkDate = subDays(checkDate, 1);
           continue;
         }
         break;
@@ -75,13 +74,29 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24 px-6 pt-safe">
+    <div className="min-h-screen bg-background pb-24 px-6 pt-safe overflow-x-hidden">
       <PageHeader 
         title="Habit Tracker" 
         subtitle={format(todayDate, "EEEE, MMMM do")}
       />
       
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+        <AnimatePresence>
+          {showMotivator && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0, scale: 0.95 }}
+              animate={{ height: "auto", opacity: 1, scale: 1 }}
+              exit={{ height: 0, opacity: 0, scale: 0.95 }}
+              className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex items-center gap-3 overflow-hidden"
+            >
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4 text-primary" />
+              </div>
+              <p className="text-sm font-bold text-primary">{motivator}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="bg-gradient-to-br from-primary to-violet-600 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
           <Quote className="absolute top-0 right-0 p-8 opacity-10" size={120} />
           <div className="relative z-10">
