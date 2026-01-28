@@ -1,19 +1,15 @@
 import { PageHeader } from "@/components/PageHeader";
-import { CheckCircle2, Quote, Zap, Circle, User, Bell, Moon, LogOut, ChevronRight, Info, Trash2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Moon, Bell, ChevronRight, Info, Trash2, Sun } from "lucide-react";
+import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useTheme } from "@/App";
+import { useTheme } from "@/hooks/use-theme";
+import { motion } from "framer-motion";
 
 export default function Settings() {
   const { toast } = useToast();
-  const { theme, setTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
-
-  const toggleDarkMode = (checked: boolean) => {
-    setTheme(checked ? "dark" : "light");
-  };
 
   const handleReset = () => {
     if (confirm("Are you sure you want to delete all habits and progress? This cannot be undone.")) {
@@ -27,7 +23,11 @@ export default function Settings() {
     <div className="min-h-screen bg-background pb-24 px-6 pt-safe">
       <PageHeader title="Settings" subtitle="Customize your experience" />
 
-      <div className="space-y-8">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-8"
+      >
         <div>
           <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4 px-2">
             App Settings
@@ -35,13 +35,13 @@ export default function Settings() {
           <div className="bg-card rounded-3xl overflow-hidden border border-border/50 shadow-sm divide-y divide-border/50">
             <div className="flex items-center p-4">
               <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mr-4">
-                <Moon className="w-5 h-5" />
+                {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </div>
               <div className="flex-1">
                 <p className="font-bold text-card-foreground">Dark Mode</p>
                 <p className="text-sm text-muted-foreground">Adjust the app appearance</p>
               </div>
-              <Switch checked={theme === "dark"} onCheckedChange={toggleDarkMode} />
+              <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
             </div>
 
             <div className="flex items-center p-4">
@@ -95,7 +95,7 @@ export default function Settings() {
         <p className="text-center text-xs text-muted-foreground font-medium pt-4 uppercase tracking-widest opacity-50">
           All data is stored locally on your device.
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }
