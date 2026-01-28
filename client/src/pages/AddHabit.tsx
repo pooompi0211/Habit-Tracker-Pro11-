@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Sparkles, Clock, Repeat, Target, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, Sparkles, Clock, Repeat, Target, Calendar as CalendarIcon, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -15,18 +16,39 @@ export default function AddHabit() {
     motivation: "",
     frequency: "daily" as "daily" | "weekly" | "custom" | "timed" | "goal",
     days: [] as number[],
+    customDates: [] as string[],
     scheduledTime: "",
     goalStreak: 7,
   });
 
+  const [tempDate, setTempDate] = useState("");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name) return;
+    
+    // Validation
+    if (!formData.name.trim()) {
+      toast({ 
+        title: "Name Required", 
+        description: "Please enter a habit name.", 
+        variant: "destructive" 
+      });
+      return;
+    }
 
-    if (formData.frequency === "custom" && formData.days.length === 0) {
+    if (formData.frequency === "weekly" && formData.days.length === 0) {
       toast({ 
         title: "Selection Required", 
-        description: "Please select at least one day for custom frequency.", 
+        description: "Please select at least one weekday.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (formData.frequency === "custom" && formData.customDates.length === 0) {
+      toast({ 
+        title: "Dates Required", 
+        description: "Please add at least one specific date.", 
         variant: "destructive" 
       });
       return;
@@ -42,6 +64,9 @@ export default function AddHabit() {
 
     localStorage.setItem("habits", JSON.stringify([...habits, newHabit]));
     
+    // Trigger storage event for other tabs/components
+    window.dispatchEvent(new Event('storage'));
+    
     toast({ title: "Habit Created", description: "Let's start tracking!" });
     setLocation("/");
   };
@@ -52,6 +77,26 @@ export default function AddHabit() {
       days: prev.days.includes(index) 
         ? prev.days.filter(d => d !== index)
         : [...prev.days, index]
+    }));
+  };
+
+  const addCustomDate = () => {
+    if (!tempDate) return;
+    if (formData.customDates.includes(tempDate)) {
+      setTempDate("");
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      customDates: [...prev.customDates, tempDate].sort()
+    }));
+    setTempDate("");
+  };
+
+  const removeCustomDate = (date: string) => {
+    setFormData(prev => ({
+      ...prev,
+      customDates: prev.customDates.filter(d => d !== date)
     }));
   };
 
@@ -98,7 +143,7 @@ export default function AddHabit() {
               {[
                 { id: "daily", icon: Repeat, label: "Daily" },
                 { id: "weekly", icon: CalendarIcon, label: "Weekly" },
-                { id: "custom", icon: Clock, label: "Custom" },
+                { id: "custom", icon: CalendarIcon, label: "Custom" },
                 { id: "timed", icon: Clock, label: "Timed" },
                 { id: "goal", icon: Target, label: "Goal" },
               ].map((type) => (
@@ -116,7 +161,7 @@ export default function AddHabit() {
               ))}
             </div>
 
-            {formData.frequency === "custom" && (
+            {formData.frequency === "weekly" && (
               <div className="flex flex-wrap gap-2 p-4 bg-card rounded-2xl border border-border/50 shadow-sm">
                 {DAYS.map((day, i) => (
                   <Button
@@ -132,8 +177,33 @@ export default function AddHabit() {
               </div>
             )}
 
+            {formData.frequency === "custom" && (
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <input 
+                    type="date" 
+                    value={tempDate}
+                    onChange={(e) => setTempDate(e.target.value)}
+                    className="flex-1 bg-card text-foreground p-3 rounded-xl border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <Button type="button" onClick={addCustomDate} className="rounded-xl">Add</Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {formData.customDates.map(date => (
+                    <div key={date} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2">
+                      {format(new Date(date), "MMM d, yyyy")}
+                      <button type="button" onClick={() => removeCustomDate(date)}>
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {formData.frequency === "timed" && (
               <div className="p-4 bg-card rounded-2xl border border-border/50 shadow-sm">
+                <label className="text-xs font-bold text-muted-foreground mb-2 block">Reminder Time</label>
                 <input 
                   type="time" 
                   value={formData.scheduledTime}
@@ -144,16 +214,22 @@ export default function AddHabit() {
             )}
 
             {formData.frequency === "goal" && (
-              <div className="p-4 bg-card rounded-2xl border border-border/50 shadow-sm space-y-2">
-                <span className="text-sm font-bold text-muted-foreground">Goal Streak: {formData.goalStreak} Days</span>
+              <div className="p-4 bg-card rounded-2xl border border-border/50 shadow-sm space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-muted-foreground">Target Completion Count</span>
+                  <span className="text-sm font-black text-primary">{formData.goalStreak} Times</span>
+                </div>
                 <input 
                   type="range" 
                   min="1" 
-                  max="30" 
+                  max="100" 
                   value={formData.goalStreak}
                   onChange={(e) => setFormData(p => ({ ...p, goalStreak: parseInt(e.target.value) }))}
-                  className="w-full accent-primary"
+                  className="w-full accent-primary h-2 bg-secondary rounded-lg appearance-none cursor-pointer"
                 />
+                <p className="text-[10px] text-muted-foreground opacity-60 text-center uppercase tracking-widest font-bold">
+                  Track progress until you reach this number
+                </p>
               </div>
             )}
           </div>
@@ -174,7 +250,7 @@ export default function AddHabit() {
         <div className="mt-4 pb-6">
           <Button
             type="submit"
-            disabled={!formData.name}
+            disabled={!formData.name.trim()}
             className="w-full h-14 rounded-2xl text-lg font-bold shadow-xl shadow-primary/30"
           >
             Create Habit
