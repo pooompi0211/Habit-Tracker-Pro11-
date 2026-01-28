@@ -1,158 +1,230 @@
 import { PageHeader } from "@/components/PageHeader";
-import { TrendingUp, Award, Target, Zap, Calendar as CalendarIcon, XCircle } from "lucide-react";
+import { TrendingUp, Award, Target, Zap, Calendar as CalendarIcon, XCircle, CheckCircle2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { format, subDays, eachDayOfInterval, isSameDay, startOfDay } from "date-fns";
+import { format, subDays, eachDayOfInterval, isSameDay, startOfDay, isBefore } from "date-fns";
 import { shouldShowHabit, type Habit } from "@/lib/habit-logic";
 
 export default function Statistics() {
   const [habits, setHabits] = useState<Habit[]>([]);
+  const today = startOfDay(new Date());
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("habits") || "[]");
-    setHabits(stored);
+    const loadHabits = () => {
+      const stored = JSON.parse(localStorage.getItem("habits") || "[]");
+      setHabits(stored);
+    };
+    loadHabits();
+    window.addEventListener('storage', loadHabits);
+    return () => window.removeEventListener('storage', loadHabits);
   }, []);
 
   const calculateStats = () => {
-    const last7Days = eachDayOfInterval({
-      start: subDays(new Date(), 6),
-      end: new Date(),
-    });
+    const todayStr = format(today, "yyyy-MM-dd");
+    const last7Days = eachDayOfInterval({ start: subDays(today, 6), end: today });
+    const last30Days = eachDayOfInterval({ start: subDays(today, 29), end: today });
 
-    let totalPossible = 0;
-    let totalCompleted = 0;
-    let missedDays = 0;
+    let habitsScheduledToday = 0;
+    let habitsCompletedToday = 0;
+    let totalScheduledLast7Days = 0;
+    let totalCompletedLast7Days = 0;
+    let totalScheduledLast30Days = 0;
+    let totalCompletedLast30Days = 0;
 
     habits.forEach(h => {
-      // Calculate missed days since habit creation
-      const start = startOfDay(new Date(h.createdAt || Date.now()));
-      const interval = eachDayOfInterval({ start, end: startOfDay(new Date()) });
-      
-      interval.forEach(day => {
-        const isScheduled = shouldShowHabit(h, day);
-        const dateStr = format(day, "yyyy-MM-dd");
-        
-        if (isScheduled) {
-          if (!h.progress || !h.progress[dateStr]) {
-            if (startOfDay(day) < startOfDay(new Date())) missedDays++;
-          }
-        }
-      });
+      // Today's stats
+      if (shouldShowHabit(h, today)) {
+        habitsScheduledToday++;
+        if (h.progress && h.progress[todayStr]) habitsCompletedToday++;
+      }
 
       // Last 7 days stats
       last7Days.forEach(day => {
-        const dateStr = format(day, "yyyy-MM-dd");
         if (shouldShowHabit(h, day)) {
-          totalPossible++;
-          if (h.progress && h.progress[dateStr]) totalCompleted++;
+          totalScheduledLast7Days++;
+          if (h.progress && h.progress[format(day, "yyyy-MM-dd")]) totalCompletedLast7Days++;
+        }
+      });
+
+      // Last 30 days stats
+      last30Days.forEach(day => {
+        if (shouldShowHabit(h, day)) {
+          totalScheduledLast30Days++;
+          if (h.progress && h.progress[format(day, "yyyy-MM-dd")]) totalCompletedLast30Days++;
         }
       });
     });
 
-    const completionRate = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
+    const completionRate7d = totalScheduledLast7Days > 0 ? Math.round((totalCompletedLast7Days / totalScheduledLast7Days) * 100) : 0;
+    const completionRate30d = totalScheduledLast30Days > 0 ? Math.round((totalCompletedLast30Days / totalScheduledLast30Days) * 100) : 0;
 
-    const currentStreak = habits.reduce((max, h) => {
-      let streak = 0;
-      let checkDate = new Date();
-      while (true) {
-        const dateStr = format(checkDate, "yyyy-MM-dd");
-        if (h.progress && h.progress[dateStr]) {
-          streak++;
-          checkDate = subDays(checkDate, 1);
-        } else {
-          if (isSameDay(checkDate, new Date())) {
-            checkDate = subDays(checkDate, 1);
-            continue;
+    // Streak calculation
+    const calculateStreaks = (habit: Habit) => {
+      let current = 0;
+      let longest = 0;
+      let tempStreak = 0;
+      
+      // Sort progress dates to iterate backwards
+      const days = eachDayOfInterval({ 
+        start: startOfDay(new Date(habit.createdAt)), 
+        end: today 
+      }).reverse();
+
+      let isCurrentStreak = true;
+      days.forEach((day, index) => {
+        const dateStr = format(day, "yyyy-MM-dd");
+        if (shouldShowHabit(habit, day)) {
+          if (habit.progress && habit.progress[dateStr]) {
+            tempStreak++;
+            if (isCurrentStreak) current++;
+          } else {
+            // If it's today and not completed yet, don't break current streak
+            if (isSameDay(day, today)) return;
+            
+            isCurrentStreak = false;
+            longest = Math.max(longest, tempStreak);
+            tempStreak = 0;
           }
-          break;
         }
-      }
-      return Math.max(max, streak);
-    }, 0);
+      });
+      longest = Math.max(longest, tempStreak);
+      return { current, longest };
+    };
+
+    const streaks = habits.map(calculateStreaks);
+    const currentStreak = streaks.length > 0 ? Math.max(...streaks.map(s => s.current)) : 0;
+    const bestStreak = streaks.length > 0 ? Math.max(...streaks.map(s => s.longest)) : 0;
 
     return { 
-      completionRate, 
+      completionRate7d,
+      completionRate30d,
       currentStreak, 
+      bestStreak,
       totalHabits: habits.length,
-      missedDays,
-      bestStreak: currentStreak // Simplified for this view
+      habitsCompletedToday,
+      habitsScheduledToday,
+      last7Days,
+      totalCompletedLast30Days,
+      totalScheduledLast30Days
     };
   };
 
   const stats = calculateStats();
 
-  const container = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
-  };
-
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 }
-  };
-
   return (
     <div className="min-h-screen bg-background pb-24 px-6 pt-safe">
-      <PageHeader title="Statistics" subtitle="Your journey in numbers" />
+      <PageHeader title="Statistics" subtitle="Real-time performance" />
 
-      <motion.div 
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-2 gap-4"
-      >
-        <motion.div variants={item} className="col-span-2 bg-card rounded-3xl p-6 border border-border/50 shadow-sm flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+      <div className="grid grid-cols-2 gap-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="col-span-2 bg-card rounded-3xl p-6 border border-border/50 shadow-sm flex items-center gap-4"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <TrendingUp className="w-8 h-8" />
           </div>
-          <div>
-            <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Completion Rate</p>
-            <p className="text-3xl font-black text-card-foreground">{stats.completionRate}% <span className="text-sm font-medium text-muted-foreground">last 7 days</span></p>
+          <div className="flex-1">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Today's Progress</p>
+            <p className="text-3xl font-black text-card-foreground">
+              {stats.habitsCompletedToday} <span className="text-lg font-bold text-muted-foreground">/ {stats.habitsScheduledToday}</span>
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-black text-primary">
+              {stats.habitsScheduledToday > 0 ? Math.round((stats.habitsCompletedToday / stats.habitsScheduledToday) * 100) : 0}%
+            </p>
           </div>
         </motion.div>
 
-        <motion.div variants={item} className="bg-card rounded-3xl p-6 border border-border/50 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center mb-4">
-            <Zap className="w-5 h-5 fill-current" />
-          </div>
-          <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Current Streak</p>
-          <p className="text-2xl font-black text-card-foreground">{stats.currentStreak} Days</p>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-card rounded-3xl p-6 border border-border/50 shadow-sm"
+        >
+          <Zap className="w-6 h-6 text-orange-500 mb-4 fill-current" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Current Streak</p>
+          <p className="text-2xl font-black text-card-foreground">{stats.currentStreak} <span className="text-xs font-bold text-muted-foreground">Days</span></p>
         </motion.div>
 
-        <motion.div variants={item} className="bg-card rounded-3xl p-6 border border-border/50 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center mb-4">
-            <Award className="w-5 h-5" />
-          </div>
-          <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Best Streak</p>
-          <p className="text-2xl font-black text-card-foreground">{stats.bestStreak} Days</p>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-card rounded-3xl p-6 border border-border/50 shadow-sm"
+        >
+          <Award className="w-6 h-6 text-yellow-500 mb-4" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Best Streak</p>
+          <p className="text-2xl font-black text-card-foreground">{stats.bestStreak} <span className="text-xs font-bold text-muted-foreground">Days</span></p>
         </motion.div>
 
-        <motion.div variants={item} className="bg-card rounded-3xl p-6 border border-border/50 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center mb-4">
-            <XCircle className="w-5 h-5" />
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="col-span-2 bg-card rounded-3xl p-6 border border-border/50 shadow-sm"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-black text-sm uppercase tracking-widest text-muted-foreground opacity-60">Weekly Overview</h3>
+            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">{stats.completionRate7d}% Rate</span>
           </div>
-          <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Missed Days</p>
-          <p className="text-2xl font-black text-destructive">{stats.missedDays}</p>
+          <div className="flex justify-between items-end gap-1 h-20">
+            {stats.last7Days.map((day, i) => {
+              const dayStr = format(day, "yyyy-MM-dd");
+              let totalScheduled = 0;
+              let totalCompleted = 0;
+              habits.forEach(h => {
+                if (shouldShowHabit(h, day)) {
+                  totalScheduled++;
+                  if (h.progress && h.progress[dayStr]) totalCompleted++;
+                }
+              });
+              const percent = totalScheduled > 0 ? (totalCompleted / totalScheduled) * 100 : 0;
+              const isToday = isSameDay(day, today);
+              
+              return (
+                <div key={dayStr} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group relative">
+                  <div 
+                    className={`w-full rounded-t-lg transition-all duration-500 ease-out ${isToday ? 'bg-primary' : 'bg-primary/20 group-hover:bg-primary/40'}`}
+                    style={{ height: `${Math.max(percent, 8)}%` }}
+                  />
+                  <span className={`text-[10px] font-bold ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>{format(day, "EEE").charAt(0)}</span>
+                </div>
+              );
+            })}
+          </div>
         </motion.div>
 
-        <motion.div variants={item} className="bg-card rounded-3xl p-6 border border-border/50 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-4">
-            <CalendarIcon className="w-5 h-5" />
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="col-span-2 bg-card rounded-3xl p-6 border border-border/50 shadow-sm"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-black text-sm uppercase tracking-widest text-muted-foreground opacity-60">Monthly Summary</h3>
+              <p className="text-2xl font-black mt-1">{stats.totalCompletedLast30Days} <span className="text-xs font-bold text-muted-foreground">Check-ins</span></p>
+            </div>
+            <div className="w-12 h-12 bg-secondary rounded-2xl flex items-center justify-center">
+              <CalendarIcon className="w-6 h-6 text-muted-foreground" />
+            </div>
           </div>
-          <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Total Habits</p>
-          <p className="text-2xl font-black text-card-foreground">{stats.totalHabits}</p>
-        </motion.div>
-
-        <motion.div variants={item} className="col-span-2 bg-secondary/30 rounded-3xl p-8 border border-dashed border-border text-center">
-          <div className="w-16 h-16 bg-card rounded-full flex items-center justify-center shadow-sm mx-auto mb-4">
-            <Target className="w-8 h-8 text-muted-foreground" />
+          <div className="space-y-3 mt-6">
+            <div className="flex justify-between items-center text-xs font-bold">
+              <span className="text-muted-foreground uppercase tracking-widest">30-Day Completion Rate</span>
+              <span>{stats.completionRate30d}%</span>
+            </div>
+            <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+              <div 
+                className="bg-primary h-full transition-all duration-1000" 
+                style={{ width: `${stats.completionRate30d}%` }} 
+              />
+            </div>
           </div>
-          <h3 className="font-bold text-lg mb-2 text-foreground">Goal Progress</h3>
-          <p className="text-muted-foreground text-sm max-w-[220px] mx-auto opacity-70 italic">
-            You've completed {stats.completionRate}% of your goals this week. Keep pushing!
-          </p>
         </motion.div>
-      </motion.div>
+      </div>
     </div>
   );
 }
