@@ -26,20 +26,23 @@ export default function Calendar() {
     const dateStr = format(date, "yyyy-MM-dd");
     const today = startOfDay(new Date());
     const dayStart = startOfDay(date);
-    const isFuture = isAfter(dayStart, today);
+    
+    // Future days: NO dots, NO marks
+    if (isAfter(dayStart, today)) return "none";
     
     const scheduledHabits = habits.filter(h => shouldShowHabit(h, date));
-
-    if (scheduledHabits.length === 0 || isFuture) return "none";
+    if (scheduledHabits.length === 0) return "none";
 
     const completed = scheduledHabits.filter(h => h.progress && h.progress[dateStr]).length;
-    
-    if (completed === scheduledHabits.length) return "full";
-    if (dayStart <= today) {
-      if (completed === 0) return "missed";
-      return "partial";
+    const isCompleted = completed > 0 && completed === scheduledHabits.length;
+
+    if (isSameDay(dayStart, today)) {
+      // Today: Green ✓ if completed, Orange dot if not
+      return isCompleted ? "full" : "pending";
+    } else {
+      // Past days: Green ✓ if completed, Empty if not
+      return isCompleted ? "full" : "none";
     }
-    return "none";
   };
 
   const selectedDayStr = format(selectedDay, "yyyy-MM-dd");
@@ -96,10 +99,7 @@ export default function Calendar() {
                     <Check className="w-1.5 h-1.5 text-white" strokeWidth={5} />
                   </div>
                 )}
-                {status === 'partial' && (
-                  <div className="absolute -bottom-1 w-2 h-2 bg-yellow-500 rounded-full border border-card" />
-                )}
-                {status === 'missed' && (
+                {status === 'pending' && (
                   <div className="absolute -bottom-1 w-2 h-2 bg-orange-500 rounded-full border border-card" />
                 )}
               </div>

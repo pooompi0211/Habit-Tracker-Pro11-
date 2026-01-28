@@ -32,15 +32,11 @@ export function shouldShowHabit(habit: Habit, date: Date): boolean {
     case "goal":
       return true;
     case "weekly":
-      // For weekly, we check if it's the selected weekday. 
-      // If none selected, default to Monday (1)
-      const weeklyDays = habit.days && habit.days.length > 0 ? habit.days : [1];
-      return weeklyDays.includes(dayIdx);
+      // Weekly habit only on selected weekdays
+      return habit.days?.includes(dayIdx) ?? false;
     case "custom":
-      // Show if it's in customDates OR if the weekday is in days (customDays)
-      const isInCustomDates = habit.customDates?.includes(dateStr);
-      const isInCustomDays = habit.days?.includes(dayIdx);
-      return !!(isInCustomDates || isInCustomDays);
+      // Custom habit only on selected specific dates
+      return habit.customDates?.includes(dateStr) ?? false;
     default:
       return false;
   }
