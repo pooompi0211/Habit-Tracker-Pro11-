@@ -1,19 +1,9 @@
 import { PageHeader } from "@/components/PageHeader";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle2, Circle, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Check } from "lucide-react";
 import { useState, useEffect } from "react";
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, isAfter, startOfDay, isBefore } from "date-fns";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, isAfter, startOfDay } from "date-fns";
 import { Button } from "@/components/ui/button";
-
-interface Habit {
-  id: string;
-  name: string;
-  progress: Record<string, boolean>;
-  frequency: "daily" | "weekly" | "custom" | "timed" | "goal";
-  days?: number[];
-  scheduledTime?: string;
-  goalStreak?: number;
-  createdAt: string;
-}
+import { shouldShowHabit, type Habit } from "@/lib/habit-logic";
 
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -34,28 +24,18 @@ export default function Calendar() {
 
   const getDayStatus = (date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd");
-    const dayIdx = getDay(date);
     const today = startOfDay(new Date());
     const dayStart = startOfDay(date);
     const isFuture = isAfter(dayStart, today);
     
-    const scheduledHabits = habits.filter(h => {
-      // Check if habit existed on this date
-      const createdAt = startOfDay(new Date(h.createdAt));
-      if (isBefore(dayStart, createdAt)) return false;
-
-      if (h.frequency === "daily" || h.frequency === "timed" || h.frequency === "goal") return true;
-      if (h.frequency === "weekly") return dayIdx === 1; // Default to Mon
-      if (h.frequency === "custom") return h.days && h.days.includes(dayIdx);
-      return false;
-    });
+    const scheduledHabits = habits.filter(h => shouldShowHabit(h, date));
 
     if (scheduledHabits.length === 0 || isFuture) return "none";
 
     const completed = scheduledHabits.filter(h => h.progress && h.progress[dateStr]).length;
     
     if (completed === scheduledHabits.length) return "full";
-    if (isBefore(dayStart, today) || isSameDay(date, today)) {
+    if (dayStart <= today) {
       if (completed === 0) return "missed";
       return "partial";
     }
@@ -63,16 +43,7 @@ export default function Calendar() {
   };
 
   const selectedDayStr = format(selectedDay, "yyyy-MM-dd");
-  const selectedDayIdx = getDay(selectedDay);
-  const selectedDayHabits = habits.filter(h => {
-    const createdAt = startOfDay(new Date(h.createdAt));
-    if (isBefore(startOfDay(selectedDay), createdAt)) return false;
-
-    if (h.frequency === "daily" || h.frequency === "timed" || h.frequency === "goal") return true;
-    if (h.frequency === "weekly") return selectedDayIdx === 1;
-    if (h.frequency === "custom") return h.days && h.days.includes(selectedDayIdx);
-    return false;
-  });
+  const selectedDayHabits = habits.filter(h => shouldShowHabit(h, selectedDay));
 
   return (
     <div className="min-h-screen bg-background pb-24 px-6 pt-safe">

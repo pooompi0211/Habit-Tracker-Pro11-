@@ -2,19 +2,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { CheckCircle2, Quote, Zap, Circle, Clock, Target as GoalIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { format, startOfDay, isSameDay } from "date-fns";
-
-interface Habit {
-  id: string;
-  name: string;
-  motivation: string;
-  frequency: "daily" | "weekly" | "custom" | "timed" | "goal";
-  days: number[];
-  scheduledTime?: string;
-  goalStreak?: number;
-  progress: Record<string, boolean>;
-  createdAt: string;
-}
+import { format, isSameDay } from "date-fns";
+import { shouldShowHabit, type Habit } from "@/lib/habit-logic";
 
 const MOTIVATIONAL_QUOTES = [
   { text: "Excellence is not an act, but a habit. We are what we repeatedly do.", author: "Aristotle" },
@@ -35,7 +24,6 @@ export default function Home() {
   
   const todayDate = new Date();
   const todayStr = format(todayDate, "yyyy-MM-dd");
-  const todayDayIndex = todayDate.getDay();
 
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem("habits") || "[]");
@@ -45,17 +33,7 @@ export default function Home() {
     setQuote(MOTIVATIONAL_QUOTES[dayOfYear % MOTIVATIONAL_QUOTES.length]);
   }, []);
 
-  const todayHabits = habits.filter(h => {
-    if (h.frequency === "daily" || h.frequency === "timed" || h.frequency === "goal") return true;
-    if (h.frequency === "weekly") {
-      // For weekly, we check if today is Monday (default) or if it's the creation day if no days specified
-      return todayDayIndex === 1; 
-    }
-    if (h.frequency === "custom") {
-      return h.days && h.days.includes(todayDayIndex);
-    }
-    return false;
-  });
+  const todayHabits = habits.filter(h => shouldShowHabit(h, todayDate));
 
   const completedCount = todayHabits.filter(h => h.progress && h.progress[todayStr]).length;
 

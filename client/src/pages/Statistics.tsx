@@ -1,17 +1,9 @@
 import { PageHeader } from "@/components/PageHeader";
-import { TrendingUp, Award, Target, Zap, Clock, Calendar as CalendarIcon, XCircle } from "lucide-react";
+import { TrendingUp, Award, Target, Zap, Calendar as CalendarIcon, XCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { format, subDays, eachDayOfInterval, isSameDay, isBefore, startOfDay } from "date-fns";
-
-interface Habit {
-  id: string;
-  name: string;
-  progress: Record<string, boolean>;
-  frequency: string;
-  days: number[];
-  createdAt: string;
-}
+import { format, subDays, eachDayOfInterval, isSameDay, startOfDay } from "date-fns";
+import { shouldShowHabit, type Habit } from "@/lib/habit-logic";
 
 export default function Statistics() {
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -37,22 +29,20 @@ export default function Statistics() {
       const interval = eachDayOfInterval({ start, end: startOfDay(new Date()) });
       
       interval.forEach(day => {
-        const dayIdx = day.getDay();
+        const isScheduled = shouldShowHabit(h, day);
         const dateStr = format(day, "yyyy-MM-dd");
-        const isScheduled = h.frequency === "daily" || (h.days && h.days.includes(dayIdx));
         
         if (isScheduled) {
           if (!h.progress || !h.progress[dateStr]) {
-            if (isBefore(day, startOfDay(new Date()))) missedDays++;
+            if (startOfDay(day) < startOfDay(new Date())) missedDays++;
           }
         }
       });
 
       // Last 7 days stats
       last7Days.forEach(day => {
-        const dayIdx = day.getDay();
         const dateStr = format(day, "yyyy-MM-dd");
-        if (h.frequency === "daily" || (h.days && h.days.includes(dayIdx))) {
+        if (shouldShowHabit(h, day)) {
           totalPossible++;
           if (h.progress && h.progress[dateStr]) totalCompleted++;
         }
